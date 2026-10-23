@@ -12,10 +12,10 @@ public sealed class AzureAiSearchVectorIndex(HttpClient client, Uri endpoint, st
 {
     private const string ApiVersion = "2024-07-01";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    public static AzureAiSearchVectorIndex FromEnvironment(HttpClient client)
+    public static AzureAiSearchVectorIndex FromEnvironment(HttpClient client, string? indexNameOverride = null)
     {
         var raw = Environment.GetEnvironmentVariable("AZURE_SEARCH_ENDPOINT");
-        var name = Environment.GetEnvironmentVariable("AZURE_SEARCH_INDEX");
+        var name = indexNameOverride ?? Environment.GetEnvironmentVariable("AZURE_SEARCH_INDEX");
         var key = Environment.GetEnvironmentVariable("AZURE_SEARCH_API_KEY");
         if (!Uri.TryCreate(raw, UriKind.Absolute, out var endpoint)
             || endpoint.Scheme != Uri.UriSchemeHttps
