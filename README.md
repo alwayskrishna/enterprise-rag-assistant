@@ -64,6 +64,16 @@ Cloud adapters now use bounded retries for transient HTTP failures and emit Acti
 
 Set `AZURE_AUTH_MODE=entra` to use DefaultAzureCredential for Azure OpenAI and Azure AI Search instead of API keys. Configure the required Azure RBAC roles; see [Entra ID authentication](docs/entra-auth.md). API-key mode remains the default.
 
+## Docker demo (no Azure credentials)
+
+```bash
+docker build -t enterprise-rag-assistant:local .
+docker run --rm enterprise-rag-assistant:local ask "How should latency incidents be handled?"
+docker run --rm enterprise-rag-assistant:local eval evals/cases.json samples/operations.txt
+```
+
+See [Docker demo instructions](docs/docker-demo.md) for running with your own documents. The image is a CLI, not an HTTP service.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
