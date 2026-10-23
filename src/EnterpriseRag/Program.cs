@@ -1,5 +1,24 @@
 using EnterpriseRag;
 
+var reader = new DocumentReader();
+if (args.Length > 0 && args[0] == "eval")
+{
+    if (args.Length < 3)
+    {
+        Console.Error.WriteLine("Usage: eval <cases.json> <document.txt|document.pdf> [...]");
+        return 2;
+    }
+    var evalChunks = new List<Chunk>();
+    foreach (var path in args.Skip(2))
+        evalChunks.AddRange(RagEngine.ChunkDocument(Path.GetFileName(path), await reader.ReadAsync(path)));
+    var cases = await RetrievalEvaluation.LoadCasesAsync(args[1]);
+    var report = RetrievalEvaluation.Run(evalChunks, cases);
+    Console.WriteLine($"Retrieval accuracy@1: {report.Passed}/{report.Total} ({report.AccuracyAtOne:P1})");
+    foreach (var item in report.Cases)
+        Console.WriteLine($"{(item.Passed ? "PASS" : "FAIL")} {item.Id}: top={item.TopDocumentId ?? "(none)"}");
+    return report.Total > 0 && report.Passed == report.Total ? 0 : 1;
+}
+
 if (args.Length > 0 && args[0] is "index" or "search" or "delete")
 {
     if (args.Length < 2)
@@ -34,7 +53,7 @@ if (args.Length > 0 && args[0] is "index" or "search" or "delete")
             Console.Error.WriteLine($"Document not found: {args[1]}");
             return 2;
         }
-        await VectorIndexing.IndexDocumentAsync(index, embeddings, Path.GetFileName(args[1]), await File.ReadAllTextAsync(args[1]));
+        await VectorIndexing.IndexDocumentAsync(index, embeddings, Path.GetFileName(args[1]), await reader.ReadAsync(args[1]));
         Console.WriteLine($"Indexed: {args[1]}");
         return 0;
     }
@@ -64,7 +83,7 @@ foreach (var path in paths)
         Console.Error.WriteLine($"Document not found: {path}");
         return 2;
     }
-    chunks.AddRange(RagEngine.ChunkDocument(Path.GetFileName(path), await File.ReadAllTextAsync(path)));
+    chunks.AddRange(RagEngine.ChunkDocument(Path.GetFileName(path), await reader.ReadAsync(path)));
 }
 
 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
