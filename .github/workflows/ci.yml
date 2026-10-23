@@ -17,3 +17,16 @@ jobs:
       - run: docker build -t enterprise-rag-assistant:ci .
       - run: docker run --rm enterprise-rag-assistant:ci ask "How should latency incidents be handled?"
       - run: docker run --rm enterprise-rag-assistant:ci eval evals/cases.json samples/operations.txt
+      - run: dotnet build src/EnterpriseRag.Api/EnterpriseRag.Api.csproj --configuration Release
+      - run: docker build -f Dockerfile.api -t enterprise-rag-api:ci .
+      - name: Smoke test API
+        run: |
+          docker run -d --rm --name rag-api-ci -p 5080:8080 enterprise-rag-api:ci
+          trap 'docker stop rag-api-ci || true' EXIT
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://localhost:5080/health; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://localhost:5080/health
+          curl --fail --silent -X POST http://localhost:5080/documents -H 'Content-Type: application/json' -d '{"id":"runbook","text":"worker queue latency incident"}'
+          curl --fail --silent -X POST http://localhost:5080/ask -H 'Content-Type: application/json' -d '{"question":"queue latency","topK":3}' | grep -q 'runbook'

@@ -74,6 +74,10 @@ docker run --rm enterprise-rag-assistant:local eval evals/cases.json samples/ope
 
 See [Docker demo instructions](docs/docker-demo.md) for running with your own documents. The image is a CLI, not an HTTP service.
 
+## HTTP API (offline demo)
+
+Run `dotnet run --project src/EnterpriseRag.Api --urls http://localhost:5080` for `/health`, `/documents` and `/ask` endpoints. See [HTTP API guide](docs/http-api.md). A separate `Dockerfile.api` packages the web service without changing the CLI container.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
