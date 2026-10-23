@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace EnterpriseRag;
 
@@ -13,13 +12,6 @@ public sealed class AzureAiSearchVectorIndex(HttpClient client, Uri endpoint, st
 {
     private const string ApiVersion = "2024-07-01";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private sealed record SearchDocument(
-        [property: JsonPropertyName("id")] string Id,
-        [property: JsonPropertyName("documentId")] string DocumentId,
-        [property: JsonPropertyName("chunkIndex")] int ChunkIndex,
-        [property: JsonPropertyName("text")] string Text,
-        [property: JsonPropertyName("embedding")] float[] Embedding);
-
     public static AzureAiSearchVectorIndex FromEnvironment(HttpClient client)
     {
         var raw = Environment.GetEnvironmentVariable("AZURE_SEARCH_ENDPOINT");
@@ -60,7 +52,7 @@ public sealed class AzureAiSearchVectorIndex(HttpClient client, Uri endpoint, st
                 ["text"] = c.text,
                 ["embedding"] = c.embedding
             }).ToArray();
-            await SendAsync(HttpMethod.Post, "docs/index", new { value = records }, cancellationToken);
+            using var uploadResponse = await SendAsync(HttpMethod.Post, "docs/index", new { value = records }, cancellationToken);
         }
     }
 
@@ -68,7 +60,8 @@ public sealed class AzureAiSearchVectorIndex(HttpClient client, Uri endpoint, st
     {
         if (string.IsNullOrWhiteSpace(documentId)) throw new ArgumentException("Document ID required.", nameof(documentId));
         // Search for existing chunk keys, then delete by key. Paged to avoid silently missing large documents.
-        while (true)
+        // Bound pagination to avoid an endless loop if deleted keys remain visible during indexing lag.
+        for (var page = 0; page < 20; page++)
         {
             using var response = await SendAsync(HttpMethod.Post, "docs/search",
                 new { search = "*", filter = $"documentId eq '{EscapeFilter(documentId)}'", select = "id", top = 500 },
@@ -78,7 +71,7 @@ public sealed class AzureAiSearchVectorIndex(HttpClient client, Uri endpoint, st
                 .Select(v => v.GetProperty("id").GetString()!).ToArray();
             if (ids.Length == 0) break;
             var deletes = ids.Select(id => new Dictionary<string, object> { ["@search.action"] = "delete", ["id"] = id }).ToArray();
-            await SendAsync(HttpMethod.Post, "docs/index", new { value = deletes }, cancellationToken);
+            using var deleteResponse = await SendAsync(HttpMethod.Post, "docs/index", new { value = deletes }, cancellationToken);
             if (ids.Length < 500) break;
         }
     }
