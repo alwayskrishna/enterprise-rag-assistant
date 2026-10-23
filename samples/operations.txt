@@ -1,0 +1,3 @@
+Incident response runbook: For elevated message processing latency, inspect queue depth and worker health. Collect logs and metrics before proposing remediation. Recovery actions require approval. Never execute destructive operations automatically.
+
+Document ingestion runbook: Validate file format, sanitize untrusted content, and track document identifiers. Chunk text for retrieval and preserve source citations. For confidential content, enforce access control before retrieval.
