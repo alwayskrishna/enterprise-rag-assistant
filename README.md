@@ -94,6 +94,10 @@ Bicep templates in `infra/` define an Azure Container Registry, managed identity
 
 `infra/ai.bicep` provisions Azure OpenAI deployments and Azure AI Search with managed identity permissions; `scripts/provision-search-index.sh` provisions the tenant-specific vector index. See [AI infrastructure deployment](docs/azure-ai-infrastructure.md). Azure deployment is opt-in and may incur charges.
 
+## Observability and monitoring
+
+The API emits OpenTelemetry traces and metrics for HTTP requests and cloud dependencies, and JSON console logs. Set `APPLICATIONINSIGHTS_CONNECTION_STRING` for Azure Monitor export. The optional `infra/monitoring.bicep` creates Application Insights, Log Analytics, and a failed-request alert. See [observability guide](docs/observability.md).
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
