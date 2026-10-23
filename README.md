@@ -56,6 +56,10 @@ Use `--azure-search` with the `index`, `search`, or `delete` commands to select 
 
 Text-based PDFs and UTF-8 text documents can now be read by the same ingestion pipeline. Run a deterministic retrieval accuracy@1 check with `dotnet run --project src/EnterpriseRag -- eval evals/cases.json samples/operations.txt`. See [PDF and evaluation guide](docs/pdf-ingestion-and-evals.md). Scanned PDFs require OCR, which is not included.
 
+## Reliability and telemetry
+
+Cloud adapters now use bounded retries for transient HTTP failures and emit ActivitySource/Meter telemetry without recording prompt text or API keys. See [operations and security notes](docs/operations.md).
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
