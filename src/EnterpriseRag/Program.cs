@@ -4,7 +4,7 @@ if (args.Length > 0 && args[0] is "index" or "search" or "delete")
 {
     if (args.Length < 2)
     {
-        Console.Error.WriteLine("Usage: index <file> | search <question> | delete <document-id> [--index-file path]");
+        Console.Error.WriteLine("Usage: index <file> | search <question> | delete <document-id> [--index-file path] [--azure-search]");
         return 2;
     }
     var optionPosition = Array.IndexOf(args, "--index-file");
@@ -14,7 +14,11 @@ if (args.Length > 0 && args[0] is "index" or "search" or "delete")
         return 2;
     }
     var indexPath = optionPosition >= 0 ? args[optionPosition + 1] : ".data/vectors.json";
-    var index = new FileVectorIndex(indexPath);
+    var useAzureSearch = args.Contains("--azure-search", StringComparer.Ordinal);
+    using var searchClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+    IVectorIndex index = useAzureSearch
+        ? AzureAiSearchVectorIndex.FromEnvironment(searchClient)
+        : new FileVectorIndex(indexPath);
     if (args[0] == "delete")
     {
         await index.DeleteDocumentAsync(args[1]);
