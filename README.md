@@ -98,6 +98,10 @@ Bicep templates in `infra/` define an Azure Container Registry, managed identity
 
 The API emits OpenTelemetry traces and metrics for HTTP requests and cloud dependencies, and JSON console logs. Set `APPLICATIONINSIGHTS_CONNECTION_STRING` for Azure Monitor export. The optional `infra/monitoring.bicep` creates Application Insights, Log Analytics, and a failed-request alert. See [observability guide](docs/observability.md).
 
+## Azure CI/CD deployment
+
+The [manual GitHub Actions deployment workflow](.github/workflows/deploy-azure.yml) tests and builds the API, then uses GitHub OIDC to push an immutable image to Azure Container Registry and update an existing Azure Container App. The deployment job uses the protected `azure-production` environment. See [Azure CI/CD setup](docs/azure-cicd.md).
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
