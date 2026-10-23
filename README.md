@@ -48,6 +48,10 @@ dotnet run --project src/EnterpriseRag -- ask "How do we address processing dela
 
 Index document embeddings once and reuse them for later searches. See [vector index commands](docs/vector-index.md) for setup and CLI examples. This local JSON-backed index is a prototype, not Azure AI Search.
 
+## Azure AI Search (optional)
+
+Use `--azure-search` with the `index`, `search`, or `delete` commands to select a cloud-hosted vector index. The Azure AI Search index schema must be provisioned first. See [Azure AI Search setup](docs/azure-ai-search.md). The local JSON index remains the default.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
