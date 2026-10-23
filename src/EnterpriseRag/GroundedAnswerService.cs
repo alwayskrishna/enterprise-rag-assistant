@@ -41,7 +41,7 @@ public sealed class AzureOpenAiAnswerGenerator(HttpClient client, Uri endpoint, 
             || string.IsNullOrWhiteSpace(deployment)
             || (Environment.GetEnvironmentVariable("AZURE_AUTH_MODE") != "entra" && string.IsNullOrWhiteSpace(key)))
             throw new InvalidOperationException("Set valid AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT and AZURE_OPENAI_API_KEY environment variables.");
-        return new AzureOpenAiAnswerGenerator(client, endpoint, deployment, key);
+        return new AzureOpenAiAnswerGenerator(client, endpoint, deployment, key ?? string.Empty);
     }
 
     public async Task<string> GenerateAsync(string question, IReadOnlyList<SearchHit> sources, CancellationToken cancellationToken = default)
