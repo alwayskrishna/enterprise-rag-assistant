@@ -99,10 +99,13 @@ public sealed class AzureAiSearchVectorIndex(HttpClient client, Uri endpoint, st
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object body, CancellationToken cancellationToken)
     {
         var uri = new Uri(endpoint, $"indexes/{Uri.EscapeDataString(indexName)}/{path}?api-version={ApiVersion}");
-        using var request = new HttpRequestMessage(method, uri);
-        request.Headers.Add("api-key", apiKey);
-        request.Content = JsonContent.Create(body, options: JsonOptions);
-        var response = await client.SendAsync(request, cancellationToken);
+        var response = await CloudResilience.SendAsync(client, () =>
+        {
+            var request = new HttpRequestMessage(method, uri);
+            request.Headers.Add("api-key", apiKey);
+            request.Content = JsonContent.Create(body, options: JsonOptions);
+            return request;
+        }, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var status = response.StatusCode;
