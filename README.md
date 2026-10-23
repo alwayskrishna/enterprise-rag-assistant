@@ -36,6 +36,14 @@ dotnet run --project src/EnterpriseRag -- ask "How should latency incidents be h
 
 The AI mode may incur Azure usage charges. It is disabled by default.
 
+## Semantic search (optional)
+
+With an Azure OpenAI embedding deployment configured, use `--semantic` to rank document chunks by neural embedding similarity instead of lexical overlap. Combine `--semantic --ai` for generated answers from semantic search results. See [semantic search setup](docs/semantic-search.md).
+
+```bash
+dotnet run --project src/EnterpriseRag -- ask "How do we address processing delays?" --semantic
+```
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
@@ -48,4 +56,4 @@ The AI mode may incur Azure usage charges. It is disabled by default.
 
 Token-frequency vectors are a local baseline, not neural embeddings. The default mode returns cited excerpts; the optional Azure OpenAI mode generates answers from retrieved context, but citations and grounding are not independently verified. Retrieval is in-memory, there is no tenant-level authorization, and lexical overlap is not evidence of semantic correctness.
 
-Next: optional Azure OpenAI embeddings and grounded answer generation; vector index abstraction and Azure AI Search; PDF ingestion; retrieval evaluation, security, observability and deployment. Azure integrations will remain opt-in.
+Next: vector index abstraction and Azure AI Search; PDF ingestion; retrieval evaluation, security, observability and deployment. Azure integrations will remain opt-in.
