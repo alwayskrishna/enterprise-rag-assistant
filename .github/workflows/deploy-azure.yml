@@ -1,0 +1,111 @@
+name: Deploy Azure Container App
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Optional immutable image tag (defaults to commit SHA)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: azure-rag-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore tests/EnterpriseRag.Tests/EnterpriseRag.Tests.csproj
+      - run: dotnet test tests/EnterpriseRag.Tests/EnterpriseRag.Tests.csproj --configuration Release --no-restore
+      - name: Resolve image tag
+        id: meta
+        env:
+          REQUESTED_TAG: ${{ inputs.image_tag }}
+        run: |
+          tag="${REQUESTED_TAG:-${GITHUB_SHA}}"
+          if ! [[ "$tag" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "Invalid image tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Build container
+        run: docker build -f Dockerfile.api -t rag-api:ci .
+      - name: Export image
+        run: docker save rag-api:ci -o rag-api.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rag-api-image
+          path: rag-api.tar
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: azure-production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: rag-api-image
+      - name: Load tested image
+        run: docker load -i rag-api.tar
+      - name: Validate required configuration
+        env:
+          CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          REGISTRY: ${{ vars.AZURE_ACR_NAME }}
+          APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+        run: |
+          for name in CLIENT_ID TENANT_ID SUBSCRIPTION_ID RESOURCE_GROUP REGISTRY APP_NAME; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing required Azure environment variable: $name" >&2
+              exit 1
+            fi
+          done
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Push image to Azure Container Registry
+        env:
+          REGISTRY: ${{ vars.AZURE_ACR_NAME }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          az acr login --name "$REGISTRY"
+          docker tag rag-api:ci "$REGISTRY.azurecr.io/enterprise-rag-api:$TAG"
+          docker push "$REGISTRY.azurecr.io/enterprise-rag-api:$TAG"
+      - name: Deploy immutable image
+        env:
+          REGISTRY: ${{ vars.AZURE_ACR_NAME }}
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          az extension add --name containerapp --upgrade
+          az containerapp update \
+            --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "$REGISTRY.azurecr.io/enterprise-rag-api:$TAG"
+      - name: Show revision status
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+        run: |
+          az containerapp revision list \
+            --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" \
+            --query '[].{name:name,active:properties.active,healthState:properties.healthState}' -o table
