@@ -67,10 +67,13 @@ public sealed class AzureOpenAiEmbeddingGenerator(HttpClient client, Uri endpoin
     {
         if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException("Text must not be empty.", nameof(text));
         var url = new Uri(endpoint, $"openai/deployments/{Uri.EscapeDataString(deployment)}/embeddings?api-version=2024-10-21");
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("api-key", apiKey);
-        request.Content = JsonContent.Create(new { input = text });
-        using var response = await client.SendAsync(request, cancellationToken);
+        using var response = await CloudResilience.SendAsync(client, () =>
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("api-key", apiKey);
+            request.Content = JsonContent.Create(new { input = text });
+            return request;
+        }, cancellationToken);
         response.EnsureSuccessStatusCode();
         using var json = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
         var vector = json.RootElement.GetProperty("data")[0].GetProperty("embedding").EnumerateArray()
