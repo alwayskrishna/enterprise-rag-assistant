@@ -2,7 +2,9 @@
 
 **.NET 10 / C# · local document retrieval · optional Azure OpenAI grounded answers**
 
-A progressively built enterprise retrieval-augmented generation portfolio project. The default mode is offline lexical retrieval. An optional Azure OpenAI mode generates answers from retrieved excerpts.
+An end-to-end .NET 10/C# retrieval-augmented generation portfolio project with an offline-first CLI and HTTP API, optional Azure OpenAI embeddings and grounded generation, Azure AI Search, Entra ID security, OpenTelemetry, Bicep infrastructure and GitHub Actions CI/CD. **The default demo runs locally without Azure credentials.**
+
+**Start here:** [System architecture](docs/architecture.md) · [5–7 minute demo](docs/demo-walkthrough.md) · [Interview-ready project highlights](docs/portfolio-highlights.md) · [Testing evidence and limits](docs/testing-and-resilience.md).
 
 ## Architecture
 
@@ -106,16 +108,18 @@ The [manual GitHub Actions deployment workflow](.github/workflows/deploy-azure.y
 
 CI verifies ingestion, retrieval, replacement, deletion, concurrent in-memory operations, cloud retry/cancellation behavior, and a bounded loopback-only API load smoke test. See [testing and resilience](docs/testing-and-resilience.md). These checks do not replace live Azure staging tests.
 
-## What is implemented
+## Capabilities at a glance
 
-- Plain-text ingestion and overlapping word chunking
-- Deterministic normalized token-frequency vectors and cosine similarity
-- Top-K ranked excerpts with document and chunk references
-- Abstention when no query tokens overlap
-- Automated unit tests and GitHub Actions CI
+| Area | Implemented |
+|---|---|
+| Ingestion | UTF-8 text and text-based PDF extraction, overlapping chunks |
+| Retrieval | Deterministic lexical cosine search, optional neural embeddings and Azure AI Search |
+| Answers | Source-referenced excerpts; optional Azure OpenAI grounded generation |
+| Interfaces | CLI, ASP.NET Core Minimal API, Docker images |
+| Cloud security | Entra ID JWT validation, Rag.Read/Rag.Write permissions, tenant-specific indexes, process-local throttling |
+| Reliability | Bounded cloud retries, telemetry, local evaluation and API load smoke testing |
+| Delivery | Bicep templates, GitHub Actions CI and manual OIDC-based Azure deployment workflow |
 
-## Limitations and roadmap
+## Limitations
 
-Token-frequency vectors are a local baseline, not neural embeddings. The default mode returns cited excerpts; the optional Azure OpenAI mode generates answers from retrieved context, but citations and grounding are not independently verified. Retrieval is in-memory, there is no tenant-level authorization, and lexical overlap is not evidence of semantic correctness.
-
-Next: vector index abstraction and Azure AI Search; PDF ingestion; retrieval evaluation, security, observability and deployment. Azure integrations will remain opt-in.
+The offline API is unauthenticated and **must not be publicly exposed**. Azure resources and production deployment are optional and have not been verified by this README. Cloud authorization does not implement per-user document ACLs; rate limits are process-local, and tenant-specific indexes require provisioning. Local retrieval accuracy and load smoke tests are not evidence of production-scale performance or independently validated LLM grounding. See [architecture and trade-offs](docs/architecture.md) for security boundaries and follow-up work.

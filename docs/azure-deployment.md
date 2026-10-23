@@ -34,8 +34,8 @@ Set `ragBackend=azure`, `azureTenantId`, `azureApiAudience`, `azureSearchEndpoin
 
 **Identity configuration caveat:** Azure.Identity's DefaultAzureCredential in Container Apps must be directed to the user-assigned identity with `AZURE_CLIENT_ID` (the identity's client ID). The Bicep template configures this automatically only after the identity is created.
 
-Assign the identity Azure AI Search index data permissions and Azure OpenAI inference permissions separately. Provision each tenant-specific Azure AI Search index beforehand, using the documented schema. Cloud mode validates incoming Entra ID JWTs but does not implement scope/role authorization or per-user document ACLs.
+Assign the identity Azure AI Search index data permissions and Azure OpenAI inference permissions separately. Provision each tenant-specific Azure AI Search index beforehand, using the documented schema. Cloud mode validates incoming Entra ID JWTs and requires Rag.Read/Rag.Write scope or app-role authorization, but does not implement per-user document ACLs.
 
 ## Safety
 
-Keep `enableExternalIngress=false` until you add app-role/scope authorization, rate limits, secure ingress/network controls, and an approved deployment security review. The offline API is unauthenticated. Do not commit secrets or credentials. The default Container Apps environment has logging disabled; enable appropriate telemetry before production use.
+Keep `enableExternalIngress=false` until you complete a secure ingress/network review, add gateway-level protection and distributed rate limits, and obtain an approved deployment security review. Application-level scopes and process-local rate limiting are already implemented. The offline API is unauthenticated. Do not commit secrets or credentials. The default Container Apps environment has logging disabled; enable appropriate telemetry before production use.
