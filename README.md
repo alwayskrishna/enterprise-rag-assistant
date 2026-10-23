@@ -52,6 +52,10 @@ Index document embeddings once and reuse them for later searches. See [vector in
 
 Use `--azure-search` with the `index`, `search`, or `delete` commands to select a cloud-hosted vector index. The Azure AI Search index schema must be provisioned first. See [Azure AI Search setup](docs/azure-ai-search.md). The local JSON index remains the default.
 
+## PDF ingestion and retrieval evaluation
+
+Text-based PDFs and UTF-8 text documents can now be read by the same ingestion pipeline. Run a deterministic retrieval accuracy@1 check with `dotnet run --project src/EnterpriseRag -- eval evals/cases.json samples/operations.txt`. See [PDF and evaluation guide](docs/pdf-ingestion-and-evals.md). Scanned PDFs require OCR, which is not included.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
