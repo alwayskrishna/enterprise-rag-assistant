@@ -44,6 +44,10 @@ With an Azure OpenAI embedding deployment configured, use `--semantic` to rank d
 dotnet run --project src/EnterpriseRag -- ask "How do we address processing delays?" --semantic
 ```
 
+## Persistent local vector index
+
+Index document embeddings once and reuse them for later searches. See [vector index commands](docs/vector-index.md) for setup and CLI examples. This local JSON-backed index is a prototype, not Azure AI Search.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
