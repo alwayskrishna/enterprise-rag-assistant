@@ -14,12 +14,14 @@ public static class CloudResilience
         CancellationToken cancellationToken = default, int maxAttempts = 3)
     {
         if (maxAttempts < 1 || maxAttempts > 5) throw new ArgumentOutOfRangeException(nameof(maxAttempts));
+        cancellationToken.ThrowIfCancellationRequested();
         using var activity = ActivitySource.StartActivity("cloud.http", ActivityKind.Client);
         var timer = Stopwatch.StartNew();
         try
         {
             for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 using var request = requestFactory();
                 try
                 {
