@@ -51,9 +51,11 @@ public sealed class AzureOpenAiAnswerGenerator(HttpClient client, Uri endpoint, 
         var context = string.Join("\n", sources.Select((source, index) =>
             $"[{index + 1}] {source.DocumentId} chunk {source.ChunkIndex}: {source.Text}"));
         var url = new Uri(endpoint, $"openai/deployments/{Uri.EscapeDataString(deployment)}/chat/completions?api-version=2024-10-21");
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("api-key", apiKey);
-        request.Content = JsonContent.Create(new
+        using var response = await CloudResilience.SendAsync(client, () =>
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("api-key", apiKey);
+            request.Content = JsonContent.Create(new
         {
             temperature = 0,
             max_tokens = 400,
@@ -63,7 +65,8 @@ public sealed class AzureOpenAiAnswerGenerator(HttpClient client, Uri endpoint, 
                 new { role = "user", content = $"Question: {question}\n\nExcerpts:\n{context}" }
             }
         });
-        using var response = await client.SendAsync(request, cancellationToken);
+            return request;
+        }, cancellationToken);
         response.EnsureSuccessStatusCode();
         using var json = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
         var answer = json.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
