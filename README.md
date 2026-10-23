@@ -78,6 +78,10 @@ See [Docker demo instructions](docs/docker-demo.md) for running with your own do
 
 Run `dotnet run --project src/EnterpriseRag.Api --urls http://localhost:5080` for `/health`, `/documents` and `/ask` endpoints. See [HTTP API guide](docs/http-api.md). A separate `Dockerfile.api` packages the web service without changing the CLI container.
 
+## Azure-backed HTTP API (optional)
+
+Set `RAG_BACKEND=azure` to connect the API to Azure OpenAI embeddings, Azure AI Search, and grounded answer generation. See [cloud API setup](docs/cloud-api.md). The default API remains offline and credential-free.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
