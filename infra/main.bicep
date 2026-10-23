@@ -52,6 +52,7 @@ param azureEmbeddingDeployment string = ''
 var registryServer = '${registryName}.azurecr.io'
 var imageName = '${registryServer}/${imageRepository}:${imageTag}'
 var cloudEnv = ragBackend == 'azure' ? [
+  { name: 'AZURE_CLIENT_ID', value: identity.properties.clientId }
   { name: 'RAG_BACKEND', value: 'azure' }
   { name: 'AZURE_AUTH_MODE', value: 'entra' }
   { name: 'AZURE_TENANT_ID', value: azureTenantId }
