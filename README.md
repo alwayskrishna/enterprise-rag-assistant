@@ -60,6 +60,10 @@ Text-based PDFs and UTF-8 text documents can now be read by the same ingestion p
 
 Cloud adapters now use bounded retries for transient HTTP failures and emit ActivitySource/Meter telemetry without recording prompt text or API keys. See [operations and security notes](docs/operations.md).
 
+## Microsoft Entra ID (optional)
+
+Set `AZURE_AUTH_MODE=entra` to use DefaultAzureCredential for Azure OpenAI and Azure AI Search instead of API keys. Configure the required Azure RBAC roles; see [Entra ID authentication](docs/entra-auth.md). API-key mode remains the default.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking

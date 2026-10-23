@@ -39,9 +39,9 @@ public sealed class AzureOpenAiAnswerGenerator(HttpClient client, Uri endpoint, 
             || endpoint.Scheme != Uri.UriSchemeHttps
             || !endpoint.Host.EndsWith(".openai.azure.com", StringComparison.OrdinalIgnoreCase)
             || string.IsNullOrWhiteSpace(deployment)
-            || string.IsNullOrWhiteSpace(key))
+            || (Environment.GetEnvironmentVariable("AZURE_AUTH_MODE") != "entra" && string.IsNullOrWhiteSpace(key)))
             throw new InvalidOperationException("Set valid AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT and AZURE_OPENAI_API_KEY environment variables.");
-        return new AzureOpenAiAnswerGenerator(client, endpoint, deployment, key);
+        return new AzureOpenAiAnswerGenerator(client, endpoint, deployment, key ?? string.Empty);
     }
 
     public async Task<string> GenerateAsync(string question, IReadOnlyList<SearchHit> sources, CancellationToken cancellationToken = default)
@@ -51,10 +51,10 @@ public sealed class AzureOpenAiAnswerGenerator(HttpClient client, Uri endpoint, 
         var context = string.Join("\n", sources.Select((source, index) =>
             $"[{index + 1}] {source.DocumentId} chunk {source.ChunkIndex}: {source.Text}"));
         var url = new Uri(endpoint, $"openai/deployments/{Uri.EscapeDataString(deployment)}/chat/completions?api-version=2024-10-21");
-        using var response = await CloudResilience.SendAsync(client, () =>
+        using var response = await CloudResilience.SendAuthenticatedAsync(client, async ct =>
         {
             var request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Add("api-key", apiKey);
+            await CloudAuthentication.FromEnvironment(apiKey, "https://cognitiveservices.azure.com/.default").AuthenticateAsync(request, ct);
             request.Content = JsonContent.Create(new
         {
             temperature = 0,

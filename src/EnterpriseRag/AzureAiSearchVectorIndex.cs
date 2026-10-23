@@ -21,9 +21,9 @@ public sealed class AzureAiSearchVectorIndex(HttpClient client, Uri endpoint, st
             || endpoint.Scheme != Uri.UriSchemeHttps
             || !endpoint.Host.EndsWith(".search.windows.net", StringComparison.OrdinalIgnoreCase)
             || string.IsNullOrWhiteSpace(name)
-            || string.IsNullOrWhiteSpace(key))
+            || (Environment.GetEnvironmentVariable("AZURE_AUTH_MODE") != "entra" && string.IsNullOrWhiteSpace(key)))
             throw new InvalidOperationException("Set AZURE_SEARCH_ENDPOINT, AZURE_SEARCH_INDEX and AZURE_SEARCH_API_KEY.");
-        return new AzureAiSearchVectorIndex(client, endpoint, name, key);
+        return new AzureAiSearchVectorIndex(client, endpoint, name, key ?? string.Empty);
     }
 
     public async Task UpsertDocumentAsync(string documentId, IReadOnlyList<IndexedChunk> chunks, CancellationToken cancellationToken = default)
@@ -99,10 +99,10 @@ public sealed class AzureAiSearchVectorIndex(HttpClient client, Uri endpoint, st
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object body, CancellationToken cancellationToken)
     {
         var uri = new Uri(endpoint, $"indexes/{Uri.EscapeDataString(indexName)}/{path}?api-version={ApiVersion}");
-        var response = await CloudResilience.SendAsync(client, () =>
+        var response = await CloudResilience.SendAuthenticatedAsync(client, async ct =>
         {
             var request = new HttpRequestMessage(method, uri);
-            request.Headers.Add("api-key", apiKey);
+            await CloudAuthentication.FromEnvironment(apiKey, "https://search.azure.com/.default").AuthenticateAsync(request, ct);
             request.Content = JsonContent.Create(body, options: JsonOptions);
             return request;
         }, cancellationToken);
