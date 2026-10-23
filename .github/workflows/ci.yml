@@ -14,3 +14,6 @@ jobs:
       - run: dotnet build tests/EnterpriseRag.Tests/EnterpriseRag.Tests.csproj --no-restore --configuration Release
       - run: dotnet test tests/EnterpriseRag.Tests/EnterpriseRag.Tests.csproj --no-build --configuration Release
       - run: dotnet run --project src/EnterpriseRag --configuration Release --no-build -- eval evals/cases.json samples/operations.txt
+      - run: docker build -t enterprise-rag-assistant:ci .
+      - run: docker run --rm enterprise-rag-assistant:ci ask "How should latency incidents be handled?"
+      - run: docker run --rm enterprise-rag-assistant:ci eval evals/cases.json samples/operations.txt
