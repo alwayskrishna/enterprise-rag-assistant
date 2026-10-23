@@ -60,7 +60,7 @@ public sealed class AzureOpenAiEmbeddingGenerator(HttpClient client, Uri endpoin
             || string.IsNullOrWhiteSpace(deployment)
             || (Environment.GetEnvironmentVariable("AZURE_AUTH_MODE") != "entra" && string.IsNullOrWhiteSpace(key)))
             throw new InvalidOperationException("Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_EMBEDDING_DEPLOYMENT and AZURE_OPENAI_API_KEY.");
-        return new AzureOpenAiEmbeddingGenerator(client, endpoint, deployment, key);
+        return new AzureOpenAiEmbeddingGenerator(client, endpoint, deployment, key ?? string.Empty);
     }
 
     public async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
