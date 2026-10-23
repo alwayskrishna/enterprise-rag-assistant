@@ -67,7 +67,6 @@ app.Use(async (context, next) =>
     }
     catch
     {
-        ApiTelemetry.Failures.Add(1);
         throw;
     }
     finally
