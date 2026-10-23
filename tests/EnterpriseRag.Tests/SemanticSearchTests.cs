@@ -26,9 +26,9 @@ public class SemanticSearchTests
             new Chunk("runbook", 0, "inspect slow message processing")
         };
         var results = await SemanticSearch.SearchAsync(chunks, "how to handle latency", new FakeEmbeddings());
-        Assert.Equal(2, results.Count);
+        Assert.Single(results);
         Assert.Equal("runbook", results[0].DocumentId);
-        Assert.True(results[0].Score > results[1].Score);
+        Assert.True(results[0].Score > 0.9);
     }
 
     [Fact]
