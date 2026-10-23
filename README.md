@@ -86,6 +86,10 @@ Set `RAG_BACKEND=azure` to connect the API to Azure OpenAI embeddings, Azure AI 
 
 In Azure-backed API mode, requests require a validated Microsoft Entra ID access token and are routed to a tenant-specific Azure AI Search index. Configure `AZURE_TENANT_ID` and `AZURE_API_AUDIENCE` and provision tenant indexes; see [API security](docs/api-security.md). Offline demo mode remains unauthenticated and is not suitable for public exposure.
 
+## Azure Container Apps infrastructure
+
+Bicep templates in `infra/` define an Azure Container Registry, managed identity, and Container Apps deployment with internal-only ingress by default. See [Azure deployment guide](docs/azure-deployment.md). No Azure resources are created by CI.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
