@@ -30,6 +30,7 @@ jobs:
           curl --fail --silent http://localhost:5080/health
           curl --fail --silent -X POST http://localhost:5080/documents -H 'Content-Type: application/json' -d '{"id":"runbook","text":"worker queue latency incident"}'
           curl --fail --silent -X POST http://localhost:5080/ask -H 'Content-Type: application/json' -d '{"question":"queue latency","topK":3}' | grep -q 'runbook'
+          python3 scripts/load-test-api.py --requests 40 --concurrency 5
       - name: Compile Bicep infrastructure template
         uses: azure/cli@v2
         with:
