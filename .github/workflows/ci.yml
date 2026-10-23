@@ -37,3 +37,4 @@ jobs:
             az bicep install
             az bicep build --file infra/main.bicep --outfile /tmp/rag-infra.json
             az bicep build --file infra/ai.bicep --outfile /tmp/rag-ai.json
+            az bicep build --file infra/monitoring.bicep --outfile /tmp/rag-monitoring.json
