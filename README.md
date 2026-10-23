@@ -102,6 +102,10 @@ The API emits OpenTelemetry traces and metrics for HTTP requests and cloud depen
 
 The [manual GitHub Actions deployment workflow](.github/workflows/deploy-azure.yml) tests and builds the API, then uses GitHub OIDC to push an immutable image to Azure Container Registry and update an existing Azure Container App. The deployment job uses the protected `azure-production` environment. See [Azure CI/CD setup](docs/azure-cicd.md).
 
+## Integration and load testing
+
+CI verifies ingestion, retrieval, replacement, deletion, concurrent in-memory operations, cloud retry/cancellation behavior, and a bounded loopback-only API load smoke test. See [testing and resilience](docs/testing-and-resilience.md). These checks do not replace live Azure staging tests.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
