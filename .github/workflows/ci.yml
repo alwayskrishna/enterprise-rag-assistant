@@ -13,3 +13,4 @@ jobs:
       - run: dotnet restore tests/EnterpriseRag.Tests/EnterpriseRag.Tests.csproj
       - run: dotnet build tests/EnterpriseRag.Tests/EnterpriseRag.Tests.csproj --no-restore --configuration Release
       - run: dotnet test tests/EnterpriseRag.Tests/EnterpriseRag.Tests.csproj --no-build --configuration Release
+      - run: dotnet run --project src/EnterpriseRag --configuration Release --no-build -- eval evals/cases.json samples/operations.txt
