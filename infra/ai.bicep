@@ -98,6 +98,6 @@ resource openAiUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 
 output searchEndpoint string = 'https://${search.name}.search.windows.net/'
 output openAiEndpoint string = 'https://${openAi.name}.openai.azure.com/'
-output searchIndexPrefix string = searchIndexPrefix
+output configuredIndexPrefix string = searchIndexPrefix
 output tenantId string = tenantId
 output embeddingDimensions int = embeddingDimensions
