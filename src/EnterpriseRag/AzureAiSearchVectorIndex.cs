@@ -23,7 +23,7 @@ public sealed class AzureAiSearchVectorIndex(HttpClient client, Uri endpoint, st
             || string.IsNullOrWhiteSpace(name)
             || (Environment.GetEnvironmentVariable("AZURE_AUTH_MODE") != "entra" && string.IsNullOrWhiteSpace(key)))
             throw new InvalidOperationException("Set AZURE_SEARCH_ENDPOINT, AZURE_SEARCH_INDEX and AZURE_SEARCH_API_KEY.");
-        return new AzureAiSearchVectorIndex(client, endpoint, name, key);
+        return new AzureAiSearchVectorIndex(client, endpoint, name, key ?? string.Empty);
     }
 
     public async Task UpsertDocumentAsync(string documentId, IReadOnlyList<IndexedChunk> chunks, CancellationToken cancellationToken = default)
