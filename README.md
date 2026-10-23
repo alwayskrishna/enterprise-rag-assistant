@@ -82,6 +82,10 @@ Run `dotnet run --project src/EnterpriseRag.Api --urls http://localhost:5080` fo
 
 Set `RAG_BACKEND=azure` to connect the API to Azure OpenAI embeddings, Azure AI Search, and grounded answer generation. See [cloud API setup](docs/cloud-api.md). The default API remains offline and credential-free.
 
+## API authentication and tenant isolation
+
+In Azure-backed API mode, requests require a validated Microsoft Entra ID access token and are routed to a tenant-specific Azure AI Search index. Configure `AZURE_TENANT_ID` and `AZURE_API_AUDIENCE` and provision tenant indexes; see [API security](docs/api-security.md). Offline demo mode remains unauthenticated and is not suitable for public exposure.
+
 ## What is implemented
 
 - Plain-text ingestion and overlapping word chunking
