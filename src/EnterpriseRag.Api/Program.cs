@@ -2,9 +2,28 @@ using EnterpriseRag;
 using EnterpriseRag.Api;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 var useCloud = string.Equals(Environment.GetEnvironmentVariable("RAG_BACKEND"), "azure", StringComparison.OrdinalIgnoreCase);
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole();
+var insightsConnection = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
+if (!string.IsNullOrWhiteSpace(insightsConnection))
+{
+    builder.Services.AddOpenTelemetry().UseAzureMonitor(options => options.ConnectionString = insightsConnection);
+}
+else
+{
+    builder.Services.AddOpenTelemetry()
+        .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation()
+            .AddSource(ApiTelemetry.SourceName, "EnterpriseRag.Cloud"))
+        .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation()
+            .AddMeter(ApiTelemetry.SourceName, "EnterpriseRag.Cloud"));
+}
 builder.Services.AddSingleton<DocumentStore>();
 builder.Services.AddHealthChecks();
 if (useCloud)
@@ -38,6 +57,28 @@ if (useCloud)
         AzureOpenAiAnswerGenerator.FromEnvironment(sp.GetRequiredService<HttpClient>()));
 }
 var app = builder.Build();
+app.Use(async (context, next) =>
+{
+    var stopwatch = Stopwatch.StartNew();
+    using var activity = ApiTelemetry.Source.StartActivity("rag.api.request");
+    try
+    {
+        await next(context);
+    }
+    catch
+    {
+        ApiTelemetry.Failures.Add(1);
+        throw;
+    }
+    finally
+    {
+        var route = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "unmatched";
+        var tags = new TagList { { "http.route", route }, { "http.response.status_code", context.Response.StatusCode } };
+        ApiTelemetry.Requests.Add(1, tags);
+        if (context.Response.StatusCode >= 500) ApiTelemetry.Failures.Add(1, tags);
+        ApiTelemetry.DurationMs.Record(stopwatch.Elapsed.TotalMilliseconds, tags);
+    }
+});
 if (useCloud)
 {
     app.UseAuthentication();
