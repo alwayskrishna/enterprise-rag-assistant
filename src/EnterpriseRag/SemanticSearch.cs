@@ -58,7 +58,7 @@ public sealed class AzureOpenAiEmbeddingGenerator(HttpClient client, Uri endpoin
             || endpoint.Scheme != Uri.UriSchemeHttps
             || !endpoint.Host.EndsWith(".openai.azure.com", StringComparison.OrdinalIgnoreCase)
             || string.IsNullOrWhiteSpace(deployment)
-            || string.IsNullOrWhiteSpace(key))
+            || (Environment.GetEnvironmentVariable("AZURE_AUTH_MODE") != "entra" && string.IsNullOrWhiteSpace(key)))
             throw new InvalidOperationException("Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_EMBEDDING_DEPLOYMENT and AZURE_OPENAI_API_KEY.");
         return new AzureOpenAiEmbeddingGenerator(client, endpoint, deployment, key);
     }
@@ -67,10 +67,10 @@ public sealed class AzureOpenAiEmbeddingGenerator(HttpClient client, Uri endpoin
     {
         if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException("Text must not be empty.", nameof(text));
         var url = new Uri(endpoint, $"openai/deployments/{Uri.EscapeDataString(deployment)}/embeddings?api-version=2024-10-21");
-        using var response = await CloudResilience.SendAsync(client, () =>
+        using var response = await CloudResilience.SendAuthenticatedAsync(client, async ct =>
         {
             var request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Add("api-key", apiKey);
+            await CloudAuthentication.FromEnvironment(apiKey, "https://cognitiveservices.azure.com/.default").AuthenticateAsync(request, ct);
             request.Content = JsonContent.Create(new { input = text });
             return request;
         }, cancellationToken);
