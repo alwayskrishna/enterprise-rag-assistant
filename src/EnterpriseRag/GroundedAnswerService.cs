@@ -10,6 +10,14 @@ public interface IGroundedAnswerGenerator
 
 public sealed class GroundedAnswerService(IGroundedAnswerGenerator generator)
 {
+    public async Task<RagAnswer> AnswerFromSourcesAsync(IReadOnlyList<SearchHit> sources, string question, CancellationToken cancellationToken = default)
+    {
+        if (sources.Count == 0)
+            return new RagAnswer("I couldn't find supporting information in the indexed documents.", sources);
+        var answer = await generator.GenerateAsync(question, sources, cancellationToken);
+        return new RagAnswer(answer, sources);
+    }
+
     public async Task<RagAnswer> AnswerAsync(IEnumerable<Chunk> chunks, string question, int topK = 3, CancellationToken cancellationToken = default)
     {
         var sources = RagEngine.Search(chunks, question, topK);
