@@ -6,6 +6,8 @@ using Azure.Monitor.OpenTelemetry.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using System.Diagnostics;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var useCloud = string.Equals(Environment.GetEnvironmentVariable("RAG_BACKEND"), "azure", StringComparison.OrdinalIgnoreCase);
@@ -24,6 +26,23 @@ else
         .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation()
             .AddMeter(ApiTelemetry.SourceName, "EnterpriseRag.Cloud"));
 }
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("api", context =>
+    {
+        // A single process-local partition per authenticated principal. Use a distributed gateway
+        // rate limiter when scaling to multiple replicas.
+        var principal = context.User.FindFirst("oid")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
+        return RateLimitPartition.GetFixedWindowLimiter(principal, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
+});
 builder.Services.AddSingleton<DocumentStore>();
 builder.Services.AddHealthChecks();
 if (useCloud)
@@ -82,6 +101,7 @@ if (useCloud)
 {
     app.UseAuthentication();
     app.UseAuthorization();
+    app.UseRateLimiter();
 }
 
 CloudRagService CloudService(HttpContext context)
@@ -101,7 +121,7 @@ var list = app.MapGet("/documents", (DocumentStore store) =>
     useCloud ? Results.StatusCode(501) : Results.Ok(store.List()));
 var upsert = app.MapPost("/documents", async (DocumentInput input, DocumentStore store, HttpContext context, CancellationToken ct) =>
 {
-    if (string.IsNullOrWhiteSpace(input.Id) || string.IsNullOrWhiteSpace(input.Text))
+    if (!ApiSecurity.ValidDocumentId(input.Id) || string.IsNullOrWhiteSpace(input.Text))
         return Results.BadRequest(new { error = "id and text are required" });
     if (input.Text.Length > 1_000_000 || input.Id.Length > 200)
         return Results.BadRequest(new { error = "document exceeds size limit" });
@@ -112,13 +132,14 @@ var upsert = app.MapPost("/documents", async (DocumentInput input, DocumentStore
 });
 var delete = app.MapDelete("/documents/{id}", async (string id, DocumentStore store, HttpContext context, CancellationToken ct) =>
 {
+    if (!ApiSecurity.ValidDocumentId(id)) return Results.BadRequest(new { error = "invalid document id" });
     if (!useCloud) return store.Delete(id) ? Results.NoContent() : Results.NotFound();
     await CloudService(context).DeleteAsync(id, ct);
     return Results.NoContent();
 });
 var ask = app.MapPost("/ask", async (AskInput input, DocumentStore store, HttpContext context, CancellationToken ct) =>
 {
-    if (string.IsNullOrWhiteSpace(input.Question) || input.TopK is < 1 or > 20)
+    if (!ApiSecurity.ValidQuestion(input.Question) || input.TopK is < 1 or > 20)
         return Results.BadRequest(new { error = "question required; topK must be between 1 and 20" });
     var answer = useCloud
         ? await CloudService(context).AskAsync(input.Question, input.TopK, ct)
@@ -127,10 +148,26 @@ var ask = app.MapPost("/ask", async (AskInput input, DocumentStore store, HttpCo
 });
 if (useCloud)
 {
-    list.RequireAuthorization();
-    upsert.RequireAuthorization();
-    delete.RequireAuthorization();
-    ask.RequireAuthorization();
+    list.RequireAuthorization().RequireRateLimiting("api")
+        .AddEndpointFilter((context, next) =>
+            ApiSecurity.HasPermission(context.HttpContext.User, "Rag.Read")
+                ? next(context)
+                : ValueTask.FromResult<object?>(Results.Forbid()));
+    upsert.RequireAuthorization().RequireRateLimiting("api")
+        .AddEndpointFilter((context, next) =>
+            ApiSecurity.HasPermission(context.HttpContext.User, "Rag.Write")
+                ? next(context)
+                : ValueTask.FromResult<object?>(Results.Forbid()));
+    delete.RequireAuthorization().RequireRateLimiting("api")
+        .AddEndpointFilter((context, next) =>
+            ApiSecurity.HasPermission(context.HttpContext.User, "Rag.Write")
+                ? next(context)
+                : ValueTask.FromResult<object?>(Results.Forbid()));
+    ask.RequireAuthorization().RequireRateLimiting("api")
+        .AddEndpointFilter((context, next) =>
+            ApiSecurity.HasPermission(context.HttpContext.User, "Rag.Read")
+                ? next(context)
+                : ValueTask.FromResult<object?>(Results.Forbid()));
 }
 app.Run();
 
